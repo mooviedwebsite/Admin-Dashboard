@@ -3,20 +3,32 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: MooviedWeb API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: movies
+    description: Movie operations
+  - name: admin
+    description: Admin operations
+  - name: reviews
+    description: Review/comment operations
+  - name: watchlist
+    description: Watchlist operations
+  - name: watch-history
+    description: Watch history operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +36,1044 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered user + token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in user + token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # ── Admin Auth ────────────────────────────────────────────────────────────
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Admin token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Admin dashboard stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/analytics:
+    get:
+      operationId: getAnalytics
+      tags: [admin]
+      summary: Analytics data
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [daily, weekly, monthly] }
+      responses:
+        "200":
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsData"
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all users
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+
+  /admin/users/{id}:
+    get:
+      operationId: getAdminUser
+      tags: [admin]
+      summary: Get user detail with activity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: User detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+    patch:
+      operationId: updateUser
+      tags: [admin]
+      summary: Update user (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [admin]
+      summary: Delete user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/users/{id}/ban:
+    post:
+      operationId: banUser
+      tags: [admin]
+      summary: Ban or unban a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BanInput"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
+  /admin/movies:
+    get:
+      operationId: listAdminMovies
+      tags: [admin]
+      summary: List movies (admin, all statuses)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, enum: [movie, series] }
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Movie list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MovieListResponse"
+    post:
+      operationId: createMovie
+      tags: [admin]
+      summary: Create a movie or TV series
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MovieInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+
+  /admin/movies/{id}:
+    get:
+      operationId: getAdminMovie
+      tags: [admin]
+      summary: Get single movie (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Movie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+    put:
+      operationId: updateMovie
+      tags: [admin]
+      summary: Update a movie or TV series
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MovieInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+    delete:
+      operationId: deleteMovie
+      tags: [admin]
+      summary: Delete a movie
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/comments:
+    get:
+      operationId: listAllComments
+      tags: [admin]
+      summary: List all comments (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Comment list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentListResponse"
+
+  /admin/comments/{id}:
+    patch:
+      operationId: updateComment
+      tags: [admin]
+      summary: Edit a comment (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+    delete:
+      operationId: deleteComment
+      tags: [admin]
+      summary: Delete a comment (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Public Movies ─────────────────────────────────────────────────────────
+  /movies:
+    get:
+      operationId: listMovies
+      tags: [movies]
+      summary: List movies with filters
+      parameters:
+        - name: genre
+          in: query
+          schema: { type: string }
+        - name: year
+          in: query
+          schema: { type: integer }
+        - name: language
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, enum: [movie, series] }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [newest, rating, downloads, az, views] }
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string, enum: [published, draft] }
+      responses:
+        "200":
+          description: Movie list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MovieListResponse"
+
+  /movies/featured:
+    get:
+      operationId: getFeaturedMovies
+      tags: [movies]
+      summary: Get featured movies
+      responses:
+        "200":
+          description: Featured
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Movie"
+
+  /movies/trending:
+    get:
+      operationId: getTrendingMovies
+      tags: [movies]
+      summary: Get trending movies
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Trending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Movie"
+
+  /movies/new-releases:
+    get:
+      operationId: getNewReleases
+      tags: [movies]
+      summary: Get new releases
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: New releases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Movie"
+
+  /movies/top-rated:
+    get:
+      operationId: getTopRated
+      tags: [movies]
+      summary: Get top-rated movies
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Top rated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Movie"
+
+  /movies/{id}:
+    get:
+      operationId: getMovie
+      tags: [movies]
+      summary: Get single movie
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Movie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movie"
+
+  # ── Reviews / Comments ────────────────────────────────────────────────────
+  /reviews/{movieId}:
+    get:
+      operationId: getMovieReviews
+      tags: [reviews]
+      summary: Get reviews for a movie
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: createReview
+      tags: [reviews]
+      summary: Post a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Created review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /reviews/{id}/delete:
+    delete:
+      operationId: deleteReview
+      tags: [reviews]
+      summary: Delete a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Admin Reviews alias ───────────────────────────────────────────────────
+  /admin/reviews:
+    get:
+      operationId: listAllReviews
+      tags: [admin]
+      summary: List all reviews (admin alias)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+
+  /admin/reviews/{id}/delete:
+    delete:
+      operationId: adminDeleteReview
+      tags: [admin]
+      summary: Admin delete review
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Watchlist ─────────────────────────────────────────────────────────────
+  /watchlist:
+    get:
+      operationId: getWatchlist
+      tags: [watchlist]
+      summary: Get user watchlist
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Watchlist
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      operationId: addToWatchlist
+      tags: [watchlist]
+      summary: Add to watchlist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchlistInput"
+      responses:
+        "200":
+          description: Added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
+  /watchlist/{movieId}:
+    delete:
+      operationId: removeFromWatchlist
+      tags: [watchlist]
+      summary: Remove from watchlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Removed
+
+  # ── Watch History ─────────────────────────────────────────────────────────
+  /watch-history:
+    get:
+      operationId: getWatchHistory
+      tags: [watch-history]
+      summary: Get watch history
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: History
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      operationId: addWatchHistory
+      tags: [watch-history]
+      summary: Add watch history entry
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchHistoryInput"
+      responses:
+        "200":
+          description: Added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
   schemas:
     HealthStatus:
       type: object
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
+      required: [status]
 
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        avatar: { type: ["string", "null"] }
+        isAdmin: { type: boolean }
+        isBanned: { type: boolean }
+        createdAt: { type: string }
+        lastLogin: { type: ["string", "null"] }
+      required: [id, name, email, isAdmin, isBanned, createdAt]
+
+    UserDetail:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        passwordHash: { type: ["string", "null"] }
+        watchHistory:
+          type: array
+          items: { type: object }
+        watchlist:
+          type: array
+          items: { type: object }
+        comments:
+          type: array
+          items: { type: object }
+
+    UserListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+        totalPages: { type: integer }
+      required: [users, total, page, limit, totalPages]
+
+    RegisterInput:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+        password: { type: string }
+      required: [name, email, password]
+
+    LoginInput:
+      type: object
+      properties:
+        email: { type: string }
+        password: { type: string }
+      required: [email, password]
+
+    ProfileUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        avatar: { type: ["string", "null"] }
+        currentPassword: { type: string }
+        newPassword: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token: { type: string }
+      required: [user, token]
+
+    BanInput:
+      type: object
+      properties:
+        banned: { type: boolean }
+      required: [banned]
+
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+        avatar: { type: ["string", "null"] }
+        isBanned: { type: boolean }
+        isAdmin: { type: boolean }
+        password: { type: string }
+
+    Movie:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        type: { type: string }
+        tagline: { type: ["string", "null"] }
+        description: { type: ["string", "null"] }
+        genres:
+          type: array
+          items: { type: string }
+        year: { type: ["integer", "null"] }
+        duration: { type: ["integer", "null"] }
+        language: { type: ["string", "null"] }
+        country: { type: ["string", "null"] }
+        director: { type: ["string", "null"] }
+        cast:
+          type: array
+          items: { type: string }
+        imdbRating: { type: ["number", "null"] }
+        posterUrl: { type: ["string", "null"] }
+        backdropUrl: { type: ["string", "null"] }
+        bannerUrl: { type: ["string", "null"] }
+        trailerUrl: { type: ["string", "null"] }
+        videoUrls: { type: object }
+        labels:
+          type: array
+          items: { type: string }
+        images:
+          type: array
+          items: { type: string }
+        seasons:
+          type: array
+          items: { type: object }
+        featured: { type: boolean }
+        status: { type: string }
+        views: { type: integer }
+        downloads: { type: integer }
+        tags:
+          type: array
+          items: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, title, type, featured, status, views, downloads, createdAt, updatedAt]
+
+    MovieInput:
+      type: object
+      properties:
+        title: { type: string }
+        type: { type: string, enum: [movie, series] }
+        tagline: { type: string }
+        description: { type: string }
+        genres:
+          type: array
+          items: { type: string }
+        year: { type: integer }
+        duration: { type: integer }
+        language: { type: string }
+        country: { type: string }
+        director: { type: string }
+        cast:
+          type: array
+          items: { type: string }
+        imdbRating: { type: number }
+        posterUrl: { type: string }
+        backdropUrl: { type: string }
+        bannerUrl: { type: string }
+        trailerUrl: { type: string }
+        videoUrls: { type: object }
+        labels:
+          type: array
+          items: { type: string }
+        images:
+          type: array
+          items: { type: string }
+        seasons:
+          type: array
+          items: { type: object }
+        featured: { type: boolean }
+        status: { type: string, enum: [draft, published] }
+        tags:
+          type: array
+          items: { type: string }
+      required: [title]
+
+    MovieListResponse:
+      type: object
+      properties:
+        movies:
+          type: array
+          items:
+            $ref: "#/components/schemas/Movie"
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+        totalPages: { type: integer }
+      required: [movies, total, page, limit, totalPages]
+
+    Comment:
+      type: object
+      properties:
+        id: { type: integer }
+        movieId: { type: integer }
+        userId: { type: integer }
+        userName: { type: ["string", "null"] }
+        userAvatar: { type: ["string", "null"] }
+        userEmail: { type: ["string", "null"] }
+        movieTitle: { type: ["string", "null"] }
+        rating: { type: ["integer", "null"] }
+        comment: { type: ["string", "null"] }
+        status: { type: string }
+        createdAt: { type: string }
+      required: [id, movieId, userId, status, createdAt]
+
+    CommentListResponse:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+        totalPages: { type: integer }
+
+    CommentUpdate:
+      type: object
+      properties:
+        comment: { type: string }
+        status: { type: string }
+
+    ReviewInput:
+      type: object
+      properties:
+        rating: { type: integer }
+        comment: { type: string }
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers: { type: integer }
+        totalMovies: { type: integer }
+        publishedMovies: { type: integer }
+        totalReviews: { type: integer }
+        totalViews: { type: integer }
+        newUsersThisWeek: { type: integer }
+        totalDownloadsToday: { type: integer }
+        activeStreams: { type: integer }
+      required: [totalUsers, totalMovies, publishedMovies, totalReviews, totalViews, newUsersThisWeek]
+
+    AnalyticsData:
+      type: object
+      properties:
+        signupsTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string }
+              count: { type: integer }
+        viewsTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string }
+              count: { type: integer }
+        topMovies:
+          type: array
+          items:
+            type: object
+
+    WatchlistInput:
+      type: object
+      properties:
+        movieId: { type: integer }
+      required: [movieId]
+
+    WatchHistoryInput:
+      type: object
+      properties:
+        movieId: { type: integer }
+        progress: { type: integer }
+        duration: { type: integer }
+      required: [movieId]

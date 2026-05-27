@@ -1,0 +1,17 @@
+name = "mooviedweb-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "movies-db"
+database_id = "82720edc-e255-4859-89be-f6f4c44bb8d7"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "movies-storage"
+
+[vars]
+ADMIN_EMAIL = "rawindunethsara93@gmail.com"
+JWT_SECRET = "streamvault-cf-secret-2024"

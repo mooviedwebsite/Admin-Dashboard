@@ -24,6 +24,12 @@ export function useAuth() {
     }
     try {
       const user = await apiFetch<AdminUser>("/auth/me");
+      if (!user.isAdmin) {
+        // Token belongs to a non-admin user — clear it
+        clearToken();
+        setState({ user: null, loading: false });
+        return;
+      }
       setState({ user, loading: false });
     } catch {
       clearToken();
@@ -44,6 +50,9 @@ export function useAuth() {
           body: JSON.stringify({ email, password }),
         }
       );
+      if (!data.user.isAdmin) {
+        throw new Error("Access denied — admin privileges required");
+      }
       setToken(data.token);
       setState({ user: data.user, loading: false });
     },

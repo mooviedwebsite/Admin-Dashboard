@@ -1,7 +1,8 @@
-name = "mooviedweb-api"
+name = "moovied-api"
 main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
+account_id = "bd99358584e9515404bc75b19c69a9ad"
 
 [[d1_databases]]
 binding = "DB"
@@ -15,3 +16,6 @@ bucket_name = "movies-storage"
 [vars]
 ADMIN_EMAIL = "rawindunethsara93@gmail.com"
 JWT_SECRET = "streamvault-cf-secret-2024"
+
+# To deploy: wrangler deploy
+# To set secrets: wrangler secret put ADMIN_PASSWORD

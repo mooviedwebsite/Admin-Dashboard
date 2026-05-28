@@ -1,210 +1,213 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Play, ChevronRight, Flame, Star, Sparkles, TrendingUp } from "lucide-react";
-import { fetchFeatured, fetchTrending, fetchNewReleases, fetchTopRated } from "@/lib/api";
+import { useState, useEffect, useRef } from "react";
+import { Play, Download, Info, ChevronLeft, ChevronRight, Star, Flame, Sparkles, TrendingUp, Clapperboard } from "lucide-react";
+import { fetchFeatured, fetchTrending, fetchNewReleases, fetchTopRated, fetchMovies } from "@/lib/api";
 import MovieCard from "@/components/MovieCard";
 import type { Movie } from "@/lib/api";
 
-const FALLBACK_BANNER =
-  "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&q=80";
+const FALLBACK_BANNER = "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1400&q=90";
 
-function HeroSection({ movie }: { movie: Movie }) {
-  const banner = movie.bannerUrl || movie.posterUrl || FALLBACK_BANNER;
+// ── Hero ─────────────────────────────────────────────────────────────────────
+function Hero({ movies }: { movies: Movie[] }) {
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const movie = movies[idx];
+
+  useEffect(() => {
+    if (movies.length <= 1) return;
+    timerRef.current = setTimeout(() => setIdx(i => (i + 1) % movies.length), 6000);
+    return () => clearTimeout(timerRef.current);
+  }, [idx, movies.length]);
+
+  if (!movie) return null;
+
+  const banner = movie.bannerUrl || movie.backdropUrl || movie.posterUrl || FALLBACK_BANNER;
   const href = movie.contentType === "series" ? `/series/${movie.id}` : `/movie/${movie.id}`;
-  return (
-    <div className="relative h-[90vh] min-h-[560px] flex items-end overflow-hidden">
-      <img
-        src={banner}
-        alt={movie.title}
-        className="absolute inset-0 w-full h-full object-cover"
-        onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_BANNER; }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/80 to-transparent" />
+  const genres: string[] = Array.isArray(movie.genre) ? movie.genre : movie.genre ? String(movie.genre).split(",").map(g => g.trim()) : [];
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 w-full">
-        <div className="max-w-2xl">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center gap-1.5 bg-[#00ff7f]/10 border border-[#00ff7f]/30 rounded-full px-3 py-1">
-              <Sparkles className="w-3.5 h-3.5 text-[#00ff7f]" />
-              <span className="text-[#00ff7f] text-xs font-semibold">Featured</span>
+  return (
+    <div className="relative h-[100svh] min-h-[600px] max-h-[900px] overflow-hidden">
+      {/* Banner image */}
+      <div className="absolute inset-0">
+        <img
+          key={banner}
+          src={banner}
+          alt={movie.title}
+          className="w-full h-full object-cover transition-opacity duration-1000 fade-in"
+          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_BANNER; }}
+        />
+      </div>
+
+      {/* Gradients */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent" />
+
+      {/* Content */}
+      <div className="absolute inset-0 flex items-center">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full pt-16">
+          <div className="max-w-xl fade-in">
+            {/* Badges */}
+            <div className="flex items-center gap-2 mb-5 flex-wrap">
+              {movie.featured && (
+                <div className="flex items-center gap-1.5 bg-[#00ff7f]/10 border border-[#00ff7f]/30 rounded-full px-3 py-1 backdrop-blur-sm">
+                  <Sparkles className="w-3 h-3 text-[#00ff7f]" />
+                  <span className="text-[#00ff7f] text-xs font-semibold">Featured</span>
+                </div>
+              )}
+              {genres.slice(0, 2).map(g => (
+                <span key={g} className="glass rounded-full px-3 py-1 text-xs text-[#ccc] font-medium">{g}</span>
+              ))}
+              {movie.imdbRating != null && (
+                <div className="flex items-center gap-1 glass rounded-full px-3 py-1">
+                  <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                  <span className="text-white text-xs font-bold">{String(movie.imdbRating || movie.rating)}</span>
+                  <span className="text-[#666] text-[10px]">IMDB</span>
+                </div>
+              )}
             </div>
-            {movie.genre && (
-              <span className="text-[#999] text-xs border border-white/10 rounded-full px-3 py-1">{movie.genre}</span>
+
+            {/* Title */}
+            <h1 className="font-heading font-black text-4xl sm:text-5xl lg:text-6xl text-white leading-[1.05] mb-4 tracking-tight">
+              {movie.title}
+            </h1>
+
+            {/* Description */}
+            {movie.description && (
+              <p className="text-[#bbb] text-base leading-relaxed mb-8 line-clamp-3 max-w-md">
+                {movie.description}
+              </p>
             )}
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            {movie.title}
-          </h1>
-          {movie.description && (
-            <p className="text-[#aaa] text-base sm:text-lg mb-8 line-clamp-3 leading-relaxed">
-              {movie.description}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href={href}
-              className="flex items-center gap-2 bg-[#00ff7f] text-black font-bold px-6 py-3 rounded-xl hover:bg-[#00e070] transition-colors text-sm"
-            >
-              <Play className="w-4 h-4 fill-black" />
-              Watch Now
-            </Link>
-            <Link
-              href={href}
-              className="flex items-center gap-2 bg-white/10 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/20 transition-colors text-sm border border-white/10"
-            >
-              More Info
-            </Link>
+
+            {/* Buttons */}
+            <div className="flex flex-wrap gap-3">
+              <Link href={href} className="flex items-center gap-2.5 bg-[#00ff7f] text-black font-bold px-7 py-3.5 rounded-xl text-sm hover:bg-[#00e070] transition-all active:scale-95"
+                style={{ boxShadow: "0 0 20px rgba(0,255,127,0.4)" }}>
+                <Play className="w-4 h-4 fill-black" />
+                Watch Now
+              </Link>
+              <Link href={href} className="flex items-center gap-2.5 glass text-white font-semibold px-7 py-3.5 rounded-xl text-sm hover:bg-white/10 transition-all">
+                <Download className="w-4 h-4" />
+                Download
+              </Link>
+              <Link href={href} className="flex items-center gap-2 text-[#aaa] hover:text-white px-4 py-3.5 text-sm transition-colors">
+                <Info className="w-4 h-4" /> More Info
+              </Link>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Hero dots */}
+      {movies.length > 1 && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {movies.map((_, i) => (
+            <button key={i} onClick={() => setIdx(i)}
+              className={`transition-all rounded-full ${i === idx ? "w-6 h-1.5 bg-[#00ff7f]" : "w-1.5 h-1.5 bg-white/30 hover:bg-white/60"}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function Section({
-  title,
-  icon,
-  movies,
-  linkHref,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  movies: Movie[];
-  linkHref: string;
-}) {
-  if (!movies.length) return null;
+// ── Horizontal scroll row ─────────────────────────────────────────────────────
+function MovieRow({ title, icon, movies, loading }: { title: string; icon: React.ReactNode; movies: Movie[]; loading?: boolean }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const scroll = (dir: number) => rowRef.current?.scrollBy({ left: dir * 700, behavior: "smooth" });
+
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-center justify-between mb-6">
+    <section className="py-6">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="text-[#00ff7f]">{icon}</div>
-          <h2 className="text-white text-xl font-bold">{title}</h2>
+          <span className="text-[#00ff7f]">{icon}</span>
+          <h2 className="font-heading font-bold text-white text-xl">{title}</h2>
         </div>
-        <Link
-          href={linkHref}
-          className="flex items-center gap-1 text-sm text-[#00ff7f] hover:text-[#00e070] font-medium transition-colors"
-        >
-          View all <ChevronRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-1">
+          <button onClick={() => scroll(-1)} className="w-8 h-8 flex items-center justify-center glass rounded-lg text-[#777] hover:text-white transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button onClick={() => scroll(1)} className="w-8 h-8 flex items-center justify-center glass rounded-lg text-[#777] hover:text-white transition-colors">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {movies.slice(0, 12).map((m) => (
-          <MovieCard key={m.id} movie={m} />
-        ))}
+
+      {/* Scroll container */}
+      <div ref={rowRef} className="scroll-row px-4 sm:px-6 lg:px-8">
+        {loading
+          ? Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-40 rounded-xl overflow-hidden" style={{ aspectRatio: "2/3" }}>
+                <div className="w-full h-full skeleton rounded-xl" />
+              </div>
+            ))
+          : movies.map(m => <MovieCard key={m.id} movie={m} />)
+        }
       </div>
     </section>
   );
 }
 
-function SkeletonRow() {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="rounded-xl overflow-hidden bg-white/5 animate-pulse">
-          <div className="aspect-[2/3] bg-white/5" />
-          <div className="p-3 space-y-2">
-            <div className="h-3 bg-white/5 rounded w-3/4" />
-            <div className="h-2 bg-white/5 rounded w-1/2" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Home() {
   const featured = useQuery({ queryKey: ["featured"], queryFn: fetchFeatured });
   const trending = useQuery({ queryKey: ["trending"], queryFn: fetchTrending });
   const newReleases = useQuery({ queryKey: ["new-releases"], queryFn: fetchNewReleases });
   const topRated = useQuery({ queryKey: ["top-rated"], queryFn: fetchTopRated });
+  const all = useQuery({ queryKey: ["movies-all"], queryFn: () => fetchMovies() });
 
-  const heroMovie = featured.data?.[0];
+  const heroMovies = featured.data?.length ? featured.data : all.data?.slice(0, 5) ?? [];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-black">
       {/* Hero */}
-      {heroMovie ? (
-        <HeroSection movie={heroMovie} />
-      ) : featured.isLoading ? (
-        <div className="h-[90vh] min-h-[560px] bg-gradient-to-b from-[#111] to-[#0a0a0a] animate-pulse flex items-center justify-center">
+      {featured.isLoading && !all.data ? (
+        <div className="h-[100svh] min-h-[600px] max-h-[900px] bg-gradient-to-b from-[#0a0a0a] to-black flex items-center justify-center skeleton">
           <div className="w-10 h-10 rounded-full border-2 border-[#00ff7f]/30 border-t-[#00ff7f] animate-spin" />
         </div>
+      ) : heroMovies.length > 0 ? (
+        <Hero movies={heroMovies} />
       ) : (
-        <div className="h-[50vh] min-h-[360px] flex items-center justify-center bg-gradient-to-b from-[#111] to-[#0a0a0a]">
-          <div className="text-center">
-            <h1 className="text-5xl font-bold text-white mb-4">
-              Moovied<span className="text-[#00ff7f]">Web</span>
-            </h1>
-            <p className="text-[#666] text-lg mb-8">Stream the latest movies &amp; TV series</p>
-            <Link href="/movies" className="bg-[#00ff7f] text-black font-bold px-8 py-3 rounded-xl hover:bg-[#00e070] transition-colors">
-              Browse Movies
-            </Link>
-          </div>
+        <div className="h-[70svh] min-h-[500px] flex flex-col items-center justify-center bg-gradient-to-b from-[#0a0a0a] to-black">
+          <h1 className="font-heading font-black text-5xl text-white mb-4">Moovied<span className="text-[#00ff7f]">Web</span></h1>
+          <p className="text-[#666] mb-8">Stream the latest movies &amp; TV series</p>
+          <Link href="/movies" className="bg-[#00ff7f] text-black font-bold px-8 py-3.5 rounded-xl hover:bg-[#00e070] transition-all" style={{boxShadow:"0 0 20px rgba(0,255,127,0.3)"}}>Browse Movies</Link>
         </div>
       )}
 
-      {/* Sections */}
-      <div className="mt-4 space-y-2">
-        {trending.isLoading ? (
-          <div className="max-w-7xl mx-auto px-4 py-10"><SkeletonRow /></div>
-        ) : (
-          <Section
-            title="Trending Now"
-            icon={<Flame className="w-5 h-5" />}
-            movies={trending.data || []}
-            linkHref="/movies"
-          />
+      {/* Content rows */}
+      <div className="mt-0 pb-20">
+        <MovieRow title="Trending Now" icon={<Flame className="w-5 h-5" />} movies={trending.data ?? []} loading={trending.isLoading} />
+        <MovieRow title="New Releases" icon={<Sparkles className="w-5 h-5" />} movies={newReleases.data ?? []} loading={newReleases.isLoading} />
+        <MovieRow title="Top Rated" icon={<Star className="w-5 h-5" />} movies={topRated.data ?? []} loading={topRated.isLoading} />
+        {(all.data?.filter(m => m.contentType === "series") ?? []).length > 0 && (
+          <MovieRow title="TV Series" icon={<Clapperboard className="w-5 h-5" />} movies={(all.data ?? []).filter(m => m.contentType === "series")} />
         )}
-
-        {newReleases.isLoading ? (
-          <div className="max-w-7xl mx-auto px-4 py-10"><SkeletonRow /></div>
-        ) : (
-          <Section
-            title="New Releases"
-            icon={<Sparkles className="w-5 h-5" />}
-            movies={newReleases.data || []}
-            linkHref="/movies"
-          />
-        )}
-
-        {topRated.isLoading ? (
-          <div className="max-w-7xl mx-auto px-4 py-10"><SkeletonRow /></div>
-        ) : (
-          <Section
-            title="Top Rated"
-            icon={<Star className="w-5 h-5" />}
-            movies={topRated.data || []}
-            linkHref="/movies"
-          />
-        )}
-
-        {featured.data && featured.data.length > 1 && (
-          <Section
-            title="Featured"
-            icon={<TrendingUp className="w-5 h-5" />}
-            movies={featured.data.slice(1)}
-            linkHref="/movies"
-          />
+        {(all.data?.filter(m => m.contentType !== "series") ?? []).length > 0 && (
+          <MovieRow title="All Movies" icon={<TrendingUp className="w-5 h-5" />} movies={(all.data ?? []).filter(m => m.contentType !== "series")} />
         )}
       </div>
 
-      {/* CTA */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 mt-10">
-        <div className="relative rounded-2xl overflow-hidden border border-[#00ff7f]/20 bg-gradient-to-r from-[#00ff7f]/5 to-transparent p-10 text-center">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#00ff7f08,transparent_70%)]" />
-          <h2 className="relative text-3xl font-bold text-white mb-3">
-            Ready to start watching?
-          </h2>
-          <p className="relative text-[#666] mb-8">
-            Create a free account and start streaming today.
-          </p>
-          <Link
-            href="/register"
-            className="relative inline-flex items-center gap-2 bg-[#00ff7f] text-black font-bold px-8 py-3 rounded-xl hover:bg-[#00e070] transition-colors"
-          >
-            Create Free Account
-          </Link>
+      {/* CTA Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+        <div className="relative rounded-2xl overflow-hidden p-12 text-center glass"
+          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(0,255,127,0.08) 0%, rgba(0,0,0,0.02) 70%)" }}>
+          <div className="absolute inset-0 border border-[#00ff7f]/15 rounded-2xl pointer-events-none" />
+          <h2 className="font-heading font-black text-3xl sm:text-4xl text-white mb-3">Start streaming for free</h2>
+          <p className="text-[#777] mb-8 text-lg">Create an account and get unlimited access to all movies and series.</p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link href="/register" className="font-bold bg-[#00ff7f] text-black px-8 py-3.5 rounded-xl hover:bg-[#00e070] transition-all text-sm"
+              style={{ boxShadow: "0 0 24px rgba(0,255,127,0.35)" }}>
+              Create Free Account
+            </Link>
+            <Link href="/movies" className="font-semibold glass text-white px-8 py-3.5 rounded-xl hover:bg-white/8 transition-all text-sm">
+              Browse Movies
+            </Link>
+          </div>
         </div>
       </div>
     </div>

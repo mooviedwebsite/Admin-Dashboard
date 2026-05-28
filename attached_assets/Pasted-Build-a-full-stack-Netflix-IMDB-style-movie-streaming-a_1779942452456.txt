@@ -1,0 +1,290 @@
+Build a full-stack Netflix + IMDB style movie streaming and download website. Follow every requirement carefully.
+
+---
+
+## TECH STACK
+- Frontend: HTML, CSS, JavaScript (React preferred)
+- Backend: Cloudflare Workers (JavaScript)
+- Database: Cloudflare D1 (SQLite-compatible)
+- File Storage: Cloudflare R2 (movie files, posters, thumbnails, trailers)
+- Auth: GitHub OAuth + Email/Password (JWT tokens)
+- Hosting: Cloudflare Pages + Workers
+
+---
+
+## THEME & UI DESIGN (CRITICAL - Follow Exactly)
+
+### Color Palette:
+- Background: #000000 (pure black)
+- Surface cards: rgba(255,255,255,0.04) with backdrop-filter: blur(20px)
+- Primary accent: #00FF7F (spring green / neon green)
+- Secondary accent: #00C853 (darker green)
+- Glow effects: 0 0 20px rgba(0,255,127,0.3), 0 0 60px rgba(0,255,127,0.1)
+- Text primary: #FFFFFF
+- Text secondary: #AAAAAA
+- Borders: rgba(0,255,127,0.15)
+- Glass cards: border: 1px solid rgba(0,255,127,0.12), background: rgba(255,255,255,0.04), backdrop-filter: blur(24px) saturate(180%)
+- NO RED anywhere in the UI
+
+### Design Style:
+- Full glassmorphism UI (frosted glass cards, panels, modals, navbar)
+- Neon green glow on hover states, active buttons, focused inputs
+- Dark grain/noise texture overlay on background (CSS or SVG filter)
+- Smooth animations: fade-in, slide-up, scale on hover
+- Green glowing borders on focused form inputs
+- Glowing green underline on active nav links
+- Custom scrollbar: black track, green thumb
+- Loading skeleton screens with green shimmer animation
+- Movie cards: glass card with green glow on hover, scale(1.05) transform
+- Hero section: full-width cinematic banner with gradient overlay (black bottom fade)
+- Buttons: solid green (#00FF7F) with black text OR outlined green with glow
+- Modals: glassmorphism popup with blurred backdrop
+- Font: 'Outfit' or 'Syne' for headings, 'DM Sans' for body (Google Fonts)
+
+### Responsive Design (CRITICAL):
+- Mobile (320px–767px): Single column, bottom nav bar, hamburger menu, touch-friendly tap targets minimum 44px, stacked cards
+- Tablet (768px–1023px): 2–3 column grid, side nav collapses to icon bar
+- Desktop (1024px+): Full sidebar or top nav, 4–5 column movie grid, full hero banner
+- Use CSS Grid + Flexbox throughout
+- Use clamp() for fluid typography
+- All glass cards, modals, and panels must be fully responsive
+
+---
+
+## PAGES & FEATURES
+
+### 1. HOME PAGE
+- Full-screen hero with featured movie (auto-rotating every 6 seconds)
+- Hero has: movie title, rating, genre tags, description, "▶ Watch Now" green button, "⬇ Download" outlined button
+- Horizontal scrollable rows:
+  - Trending Now
+  - New Releases
+  - Top Rated
+  - Action | Comedy | Horror | Drama (genre rows)
+- Each movie card shows: poster, title, year, rating badge (green), hover overlay with play button + quick info
+- Sticky glass navbar: logo left, search center, nav links, user avatar right
+
+### 2. MOVIE DETAIL PAGE
+- Large cinematic banner with trailer auto-play (muted)
+- Movie info: title, tagline, rating (IMDB style stars), genres, year, duration, language, director, cast
+- Tab sections: Overview | Cast | Reviews | Similar Movies
+- "▶ Watch Now" button → opens built-in video player
+- "⬇ Download" button → shows quality options (480p, 720p, 1080p, 4K)
+- User reviews section: star rating input + comment box
+- Related/similar movies row at bottom
+
+### 3. VIDEO PLAYER PAGE
+- Full-screen custom HTML5 video player
+- Controls: play/pause, volume, seek bar (green), fullscreen, quality selector, subtitle selector, playback speed
+- Progress auto-saved to D1 database per user
+- "Continue Watching" feature (remembers timestamp)
+- Picture-in-picture support
+- Green themed player controls with glow
+
+### 4. SEARCH PAGE
+- Live search with debounce (300ms)
+- Filter by: Genre, Year, Rating, Language, Type (Movie/Series)
+- Sort by: Newest, Rating, Most Downloaded, A-Z
+- Results in responsive grid
+- No results: green animated empty state illustration
+
+### 5. BROWSE / CATEGORIES PAGE
+- Genre filter buttons (pill style, green active state)
+- Infinite scroll or pagination
+- View toggle: Grid / List
+
+### 6. USER AUTH PAGES
+
+#### Register Page:
+- Fields: Full Name, Email, Password, Confirm Password
+- GitHub OAuth button ("Continue with GitHub" — black button with green border and GitHub icon)
+- Email verification flow
+- Glass card form, green glowing inputs on focus
+- Password strength indicator (green bar)
+
+#### Login Page:
+- Email + Password fields
+- GitHub OAuth button
+- "Remember Me" toggle
+- "Forgot Password" link
+- Glass modal style
+
+#### Forgot Password Page:
+- Email input → send reset link
+- OTP or token-based reset
+
+### 7. USER DASHBOARD / PROFILE
+- Avatar, username, email, join date
+- Tabs:
+  - Watch History (with timestamps)
+  - Watchlist / Saved Movies
+  - Downloaded Movies
+  - My Reviews
+  - Account Settings (change name, email, password)
+- Activity feed with green timeline style
+
+### 8. WATCHLIST / MY LIST
+- Add/remove movies with heart or bookmark icon
+- Persistent across sessions (stored in D1)
+- Displayed in user dashboard
+
+---
+
+## ADMIN PANEL (Separate Route: /admin)
+
+### Admin Login:
+- Email: rawindunethsara93@gmail.com
+- Password: Rnd@12114
+- Hardcoded admin credentials checked against D1 or env variable
+- Separate login page at /admin/login
+- JWT token stored in httpOnly cookie for admin session
+- Non-admins cannot access /admin routes (redirect to home)
+
+### Admin Dashboard Overview:
+- Stats cards (glass style, green accents):
+  - Total Users
+  - Total Movies
+  - Total Downloads Today
+  - Active Streams Now
+  - New Registrations This Week
+  - Storage Used (R2)
+- Recent Activity Feed (live updates)
+- Charts: Daily visits, downloads, signups (use Chart.js — green colored)
+
+### Admin: User Management
+- Table of ALL users with columns:
+  - ID, Name, Email, Password (show/hide toggle — show hashed + option to view plain if stored), Join Date, Last Login, Status (Active/Banned)
+- Search and filter users
+- View full user profile
+- View user watch history, downloads, reviews
+- Ban / Unban user
+- Delete user
+- Reset user password
+- Export users as CSV
+
+### Admin: Movie Management
+- Table of all movies with poster thumbnail, title, year, views, downloads, status
+- Add New Movie form:
+  - Title, Tagline, Description
+  - Genre (multi-select)
+  - Year, Duration, Language, Country
+  - Director, Cast (comma separated)
+  - IMDB Rating input
+  - Poster Image upload → R2
+  - Backdrop/Banner Image upload → R2
+  - Trailer URL (YouTube embed or direct upload → R2)
+  - Video files per quality: 480p, 720p, 1080p, 4K — upload to R2
+  - Subtitle files upload (.srt, .vtt) per language
+  - Tags, Featured toggle, Status (Published/Draft)
+- Edit existing movie (same form pre-filled)
+- Delete movie (with confirmation modal)
+- Bulk actions: publish, draft, delete selected
+
+### Admin: Reviews Management
+- View all user reviews
+- Approve / Delete reviews
+
+### Admin: Analytics
+- Total views per movie
+- Download counts per movie
+- User signup trend (daily/weekly/monthly)
+- Most watched movies
+- Most downloaded movies
+- Geographic data if available
+
+### Admin: Settings
+- Site name, logo, tagline
+- Featured movie selector
+- Maintenance mode toggle
+- Storage stats (R2 usage)
+
+---
+
+## CLOUDFLARE D1 DATABASE SCHEMA
+
+```sql
+-- Users
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT,
+  github_id TEXT,
+  avatar TEXT,
+  role TEXT DEFAULT 'user',
+  is_banned INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_login DATETIME
+);
+
+-- Movies
+CREATE TABLE movies (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  tagline TEXT,
+  description TEXT,
+  genre TEXT,
+  year INTEGER,
+  duration INTEGER,
+  language TEXT,
+  country TEXT,
+  director TEXT,
+  cast TEXT,
+  imdb_rating REAL,
+  poster_url TEXT,
+  backdrop_url TEXT,
+  trailer_url TEXT,
+  video_480p TEXT,
+  video_720p TEXT,
+  video_1080p TEXT,
+  video_4k TEXT,
+  subtitles TEXT,
+  tags TEXT,
+  is_featured INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'draft',
+  views INTEGER DEFAULT 0,
+  downloads INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Watch History
+CREATE TABLE watch_history (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  movie_id TEXT,
+  progress INTEGER DEFAULT 0,
+  watched_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Watchlist
+CREATE TABLE watchlist (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  movie_id TEXT,
+  added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Reviews
+CREATE TABLE reviews (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  movie_id TEXT,
+  rating INTEGER,
+  comment TEXT,
+  status TEXT DEFAULT 'approved',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Downloads
+CREATE TABLE downloads (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  movie_id TEXT,
+  quality TEXT,
+  downloaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## CLOUDFLARE WORKERS API ROUTES

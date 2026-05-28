@@ -88,28 +88,30 @@ export async function fetchMovies(params?: Record<string, string>): Promise<Movi
 }
 
 export async function fetchFeatured(): Promise<Movie[]> {
-  const res = await apiFetch<MoviesResponse>("/movies/featured");
-  return res.movies || [];
+  const res = await apiFetch<Movie[]>("/movies/featured");
+  return Array.isArray(res) ? res : (res as unknown as MoviesResponse).movies || [];
 }
 
 export async function fetchTrending(): Promise<Movie[]> {
-  const res = await apiFetch<MoviesResponse>("/movies/trending");
-  return res.movies || [];
+  const res = await apiFetch<Movie[]>("/movies/trending");
+  return Array.isArray(res) ? res : (res as unknown as MoviesResponse).movies || [];
 }
 
 export async function fetchNewReleases(): Promise<Movie[]> {
-  const res = await apiFetch<MoviesResponse>("/movies/new-releases");
-  return res.movies || [];
+  const res = await apiFetch<Movie[]>("/movies/new-releases");
+  return Array.isArray(res) ? res : (res as unknown as MoviesResponse).movies || [];
 }
 
 export async function fetchTopRated(): Promise<Movie[]> {
-  const res = await apiFetch<MoviesResponse>("/movies/top-rated");
-  return res.movies || [];
+  const res = await apiFetch<Movie[]>("/movies/top-rated");
+  return Array.isArray(res) ? res : (res as unknown as MoviesResponse).movies || [];
 }
 
 export async function fetchMovie(id: number): Promise<Movie> {
-  const res = await apiFetch<MovieResponse>(`/movies/${id}`);
-  return res.movie;
+  const res = await apiFetch<Movie | MovieResponse>(`/movies/${id}`);
+  // Worker returns the movie object directly
+  if ((res as MovieResponse).movie) return (res as MovieResponse).movie;
+  return res as Movie;
 }
 
 // ── Reviews ────────────────────────────────────────────────────────
@@ -124,8 +126,9 @@ export interface Review {
 }
 
 export async function fetchReviews(movieId: number): Promise<Review[]> {
-  const res = await apiFetch<{ success: boolean; reviews: Review[] }>(`/reviews/${movieId}`);
-  return res.reviews || [];
+  const res = await apiFetch<Review[] | { reviews: Review[] }>(`/reviews/${movieId}`);
+  if (Array.isArray(res)) return res;
+  return (res as { reviews: Review[] }).reviews || [];
 }
 
 export async function postReview(
@@ -141,8 +144,21 @@ export async function postReview(
 
 // ── Watchlist ──────────────────────────────────────────────────────
 export async function fetchWatchlist(): Promise<Movie[]> {
-  const res = await apiFetch<{ success: boolean; watchlist: { movie: Movie }[] }>("/watchlist", {}, true);
-  return (res.watchlist || []).map((w) => w.movie);
+  // Worker returns flat rows: [{id, user_id, movie_id, title, poster_url, year, imdb_rating, ...}]
+  const res = await apiFetch<Array<Record<string, unknown>>>("/watchlist", {}, true);
+  const rows = Array.isArray(res) ? res : (res as unknown as { watchlist: Array<Record<string, unknown>> }).watchlist || [];
+  return rows.map((w) => {
+    // If nested {movie:{}} shape, unwrap it
+    if (w.movie) return w.movie as unknown as Movie;
+    // Flat row from Worker
+    return {
+      id: w.movie_id as number,
+      title: w.title as string,
+      posterUrl: w.poster_url as string | undefined,
+      year: w.year as number | undefined,
+      rating: w.imdb_rating as number | undefined,
+    } as Movie;
+  });
 }
 
 export async function addToWatchlist(movieId: number): Promise<void> {

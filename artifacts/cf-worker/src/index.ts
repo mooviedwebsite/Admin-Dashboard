@@ -126,7 +126,8 @@ function cors(): Response {
 async function getAuth(req: Request, env: Env): Promise<{ userId: number; isAdmin: boolean } | null> {
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
-  const payload = await verifyJWT(auth.slice(7), JWT_SECRET_KEY);
+  const secret = env.JWT_SECRET || JWT_SECRET_KEY;
+  const payload = await verifyJWT(auth.slice(7), secret);
   if (!payload) return null;
   return { userId: payload.userId as number, isAdmin: payload.isAdmin as boolean };
 }
@@ -137,9 +138,10 @@ async function requireAdmin(req: Request, env: Env): Promise<{ userId: number; i
   return auth;
 }
 
-function makeToken(userId: number, isAdmin: boolean): Promise<string> {
+function makeToken(userId: number, isAdmin: boolean, env: Env): Promise<string> {
+  const secret = env.JWT_SECRET || JWT_SECRET_KEY;
   const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
-  return signJWT({ userId, isAdmin, exp }, JWT_SECRET_KEY);
+  return signJWT({ userId, isAdmin, exp }, secret);
 }
 
 // ─── DB helpers ─────────────────────────────────────────────────────────────
@@ -273,11 +275,16 @@ function formatUser(u: Record<string, unknown>) {
 
 // ─── Router ─────────────────────────────────────────────────────────────────
 
+let schemaInitialized = false;
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === "OPTIONS") return cors();
 
-    await initSchema(env.DB);
+    if (!schemaInitialized) {
+      await initSchema(env.DB);
+      schemaInitialized = true;
+    }
 
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, "");
@@ -300,7 +307,7 @@ export default {
         "INSERT INTO users (name, email, password_hash, is_admin) VALUES (?, ?, ?, ?) RETURNING *"
       ).bind(body.name, body.email, hash, isAdmin).first<Record<string, unknown>>();
       if (!result) return err("Failed to create user", 500);
-      const token = await makeToken(result.id as number, !!isAdmin);
+      const token = await makeToken(result.id as number, !!isAdmin, env);
       return json({ user: formatUser(result), token }, 201);
     }
 
@@ -313,7 +320,7 @@ export default {
       const valid = await verifyPassword(body.password, user.password_hash as string);
       if (!valid) return err("Invalid credentials", 401);
       await env.DB.prepare("UPDATE users SET last_login = datetime('now') WHERE id = ?").bind(user.id).run();
-      const token = await makeToken(user.id as number, !!user.is_admin);
+      const token = await makeToken(user.id as number, !!user.is_admin, env);
       return json({ user: formatUser(user), token });
     }
 
@@ -344,14 +351,14 @@ export default {
           user.is_admin = 1;
         }
         if (!user) return err("Failed to create admin", 500);
-        const token = await makeToken(user.id as number, true);
+        const token = await makeToken(user.id as number, true, env);
         return json({ user: formatUser(user), token });
       }
       const user = await env.DB.prepare("SELECT * FROM users WHERE email = ? AND is_admin = 1").bind(body.email).first<Record<string, unknown>>();
       if (!user) return err("Unauthorized", 401);
       const valid = await verifyPassword(body.password, user.password_hash as string);
       if (!valid) return err("Invalid credentials", 401);
-      const token = await makeToken(user.id as number, true);
+      const token = await makeToken(user.id as number, true, env);
       return json({ user: formatUser(user), token });
     }
 
@@ -656,7 +663,7 @@ export default {
       await env.R2.put(key, await file.arrayBuffer(), {
         httpMetadata: { contentType: file.type },
       });
-      const publicUrl = `https://pub-${key}`;
+      const publicUrl = `https://pub-${env.R2 ? "r2" : "r2"}.${key}`; // unused, served via worker
       return json({ key, url: `/api/media/${key}` });
     }
 

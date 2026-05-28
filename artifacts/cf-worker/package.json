@@ -1,13 +1,17 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "bundler",
-    "types": ["@cloudflare/workers-types"],
-    "strict": true,
-    "noEmit": true,
-    "skipLibCheck": true
+  "name": "@workspace/cf-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
   },
-  "include": ["src/**/*.ts"]
+  "dependencies": {},
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250525.0",
+    "typescript": "~5.9.3",
+    "wrangler": "^4.14.4"
+  }
 }
-

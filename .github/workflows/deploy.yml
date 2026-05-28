@@ -41,7 +41,7 @@ jobs:
       - name: Build streamvault
         env:
           PORT: "3000"
-          BASE_PATH: "/"
+          BASE_PATH: "/Admin-Dashboard/"
           NODE_ENV: production
           VITE_CF_WORKER_URL: ${{ secrets.VITE_CF_WORKER_URL }}
         run: pnpm --filter @workspace/streamvault run build

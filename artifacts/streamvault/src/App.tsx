@@ -3,6 +3,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+
+// Public pages
+import Home from "@/pages/public/Home";
+import Browse from "@/pages/public/Browse";
+import MovieDetail from "@/pages/public/MovieDetail";
+import SearchPage from "@/pages/public/SearchPage";
+
+// Auth pages
+import UserLogin from "@/pages/auth/UserLogin";
+import Register from "@/pages/auth/Register";
+
+// User pages
+import Watchlist from "@/pages/user/Watchlist";
+
+// Admin pages
 import AdminLogin from "@/pages/admin/login";
 import Dashboard from "@/pages/admin/dashboard";
 import MoviesPage from "@/pages/admin/movies";
@@ -21,7 +38,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedAdminRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -46,19 +63,45 @@ function SeriesPageWrapper() {
   return <MoviesPage contentType="series" />;
 }
 
+function PublicLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Navbar />
+      {children}
+      <Footer />
+    </>
+  );
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => <Redirect to="/admin" />} />
+      {/* Public website */}
+      <Route path="/" component={() => <PublicLayout><Home /></PublicLayout>} />
+      <Route path="/movies" component={() => <PublicLayout><Browse contentType="movie" /></PublicLayout>} />
+      <Route path="/series" component={() => <PublicLayout><Browse contentType="series" /></PublicLayout>} />
+      <Route path="/movie/:id" component={() => <PublicLayout><MovieDetail /></PublicLayout>} />
+      <Route path="/series/:id" component={() => <PublicLayout><MovieDetail /></PublicLayout>} />
+      <Route path="/search" component={() => <PublicLayout><SearchPage /></PublicLayout>} />
+
+      {/* User auth */}
+      <Route path="/login" component={UserLogin} />
+      <Route path="/register" component={Register} />
+
+      {/* User protected */}
+      <Route path="/watchlist" component={() => <PublicLayout><Watchlist /></PublicLayout>} />
+
+      {/* Admin */}
       <Route path="/admin/login" component={AdminLogin} />
-      <Route path="/admin" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/admin/movies" component={() => <ProtectedRoute component={MoviesPage} />} />
-      <Route path="/admin/movies/new" component={() => <ProtectedRoute component={MoviesPage} />} />
-      <Route path="/admin/series" component={() => <ProtectedRoute component={SeriesPageWrapper} />} />
-      <Route path="/admin/users" component={() => <ProtectedRoute component={UsersPage} />} />
-      <Route path="/admin/reviews" component={() => <ProtectedRoute component={ReviewsPage} />} />
-      <Route path="/admin/analytics" component={() => <ProtectedRoute component={AnalyticsPage} />} />
-      <Route path="/admin/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
+      <Route path="/admin" component={() => <ProtectedAdminRoute component={Dashboard} />} />
+      <Route path="/admin/movies" component={() => <ProtectedAdminRoute component={MoviesPage} />} />
+      <Route path="/admin/movies/new" component={() => <ProtectedAdminRoute component={MoviesPage} />} />
+      <Route path="/admin/series" component={() => <ProtectedAdminRoute component={SeriesPageWrapper} />} />
+      <Route path="/admin/users" component={() => <ProtectedAdminRoute component={UsersPage} />} />
+      <Route path="/admin/reviews" component={() => <ProtectedAdminRoute component={ReviewsPage} />} />
+      <Route path="/admin/analytics" component={() => <ProtectedAdminRoute component={AnalyticsPage} />} />
+      <Route path="/admin/settings" component={() => <ProtectedAdminRoute component={SettingsPage} />} />
+
       <Route component={NotFound} />
     </Switch>
   );
